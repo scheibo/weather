@@ -70,8 +70,11 @@ func main() {
 		exit(fmt.Errorf("latlng required"))
 	}
 
-	// TODO
-	fmt.Printf("latlng: %s / time: %v\n", ll, t)
+	w, err := wtwi.Get(ll, t)
+	if err != nil {
+		exit(err)
+	}
+	fmt.Println(w)
 }
 
 func exit(err error) {
