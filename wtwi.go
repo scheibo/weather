@@ -12,12 +12,19 @@ import (
 )
 
 type LatLng struct {
-	Lat string
-	Lng string
+	Lat, Lng float64
 }
 
 func (ll LatLng) String() string {
-	return fmt.Sprintf("%s,s", ll.Lng, ll.Lng)
+	return fmt.Sprintf("%s,%s", ll.Latitude(), ll.Longitude())
+}
+
+func (ll *LatLng) Latitude() string {
+	return fmt.Sprintf("%.6f", ll.Lat)
+}
+
+func (ll *LatLng) Longitude() string {
+	return fmt.Sprintf("%.6f", ll.Lng)
 }
 
 func ParseLatLng(s string) (LatLng, error) {
@@ -26,16 +33,12 @@ func ParseLatLng(s string) (LatLng, error) {
 		return LatLng{}, fmt.Errorf("expected 'latitude,longitude' pair")
 	}
 
-	// NOTE: We want to ensure what we parsed are valid floats, but we don't
-	// store the coordinates as floats to avoid precision issues.
-	lat := strings.TrimSpace(sp[0])
-	_, err := strconv.ParseFloat(lat, 64)
+	lat, err := strconv.ParseFloat(strings.TrimSpace(sp[0]), 64)
 	if err != nil {
 		return LatLng{}, err
 	}
 
-	lng := strings.TrimSpace(sp[1])
-	_, err = strconv.ParseFloat(lng, 64)
+	lng, err := strconv.ParseFloat(strings.TrimSpace(sp[1]), 64)
 	if err != nil {
 		return LatLng{}, err
 	}
@@ -52,7 +55,7 @@ type Weather struct {
 
 func (w Weather) String() string {
 	return fmt.Sprintf(
-		"temp:%.1f°C, wind: %.1fkm/h %s, density:%.3fkg/m³",
+		"temp: %.1f °C, wind: %.1f km/h %s, density: %.3f kg/m³",
 		round(w.Temperature, 0.1),
 		round(w.WindSpeed*3600.0/1000.0, 0.1),
 		bearingString(w.WindBearing),
@@ -69,7 +72,7 @@ func Get(ll LatLng, t time.Time, keys ...string) (*Weather, error) {
 	}
 
 	client := darksky.NewClient(key)
-	f, err := client.GetTimeMachineForecast(ll.Lat, ll.Lng, t, darksky.Arguments{"units": "si"})
+	f, err := client.GetTimeMachineForecast(ll.Latitude(), ll.Longitude(), t, darksky.Arguments{"units": "si"})
 	if err != nil {
 		return nil, err
 	}
@@ -82,6 +85,8 @@ func Get(ll LatLng, t time.Time, keys ...string) (*Weather, error) {
 	dp := f.Currently.DewPoint
 	ws := f.Currently.WindSpeed
 	wb := f.Currently.WindBearing
+
+	println(bearingString(-1), bearingString(11.25), bearingString(181))
 
 	return &Weather{
 		Temperature: T,
@@ -116,44 +121,14 @@ func rho(t, p, dp float64) float64 {
 }
 
 func bearingString(wb float64) string {
-	var dir string
+	var COMPASS = []string{
+		"N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
+		"S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW",
+	}
 
 	nwb := normalizeBearing(wb)
-	if nwb < 11.25 {
-		dir = "N"
-	} else if nwb >= 11.25 && nwb < 33.75 {
-		dir = "NNE"
-	} else if nwb >= 33.75 && nwb < 56.25 {
-		dir = "NE"
-	} else if nwb >= 56.25 && nwb < 78.75 {
-		dir = "ENE"
-	} else if nwb >= 78.75 && nwb < 101.25 {
-		dir = "E"
-	} else if nwb >= 101.25 && nwb < 123.75 {
-		dir = "ESE"
-	} else if nwb >= 123.75 && nwb < 146.25 {
-		dir = "SE"
-	} else if nwb >= 146.25 && nwb < 168.75 {
-		dir = "SSE"
-	} else if nwb >= 168.75 && nwb < 191.25 {
-		dir = "S"
-	} else if nwb >= 191.25 && nwb < 213.75 {
-		dir = "SSW"
-	} else if nwb >= 213.75 && nwb < 236.25 {
-		dir = "SW"
-	} else if nwb >= 236.25 && nwb < 258.75 {
-		dir = "WSW"
-	} else if nwb >= 258.75 && nwb < 281.25 {
-		dir = "W"
-	} else if nwb >= 281.25 && nwb < 303.75 {
-		dir = "WNW"
-	} else if nwb >= 303.75 && nwb < 326.25 {
-		dir = "NW"
-	} else if nwb >= 326.25 && nwb < 348.75 {
-		dir = "NNW"
-	} else if nwb >= 348.75 {
-		dir = "N"
-	}
+	index := int(math.Mod((nwb+11.25)/22.5, 16))
+	dir := COMPASS[index]
 
 	return fmt.Sprintf("%s (%.1f°)", dir, round(nwb, 0.5))
 }
@@ -163,11 +138,5 @@ func round(x, unit float64) float64 {
 }
 
 func normalizeBearing(d float64) float64 {
-	if d < 0 {
-		return normalizeBearing(360 - d)
-	} else if d >= 360 {
-		return normalizeBearing(d - 360)
-	} else {
-		return d
-	}
+	return d + math.Ceil(-d/360)*360
 }
