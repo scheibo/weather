@@ -48,11 +48,13 @@ func (ll *LatLngFlag) Set(v string) error {
 }
 
 func main() {
+	var key string
 	var tf TimeFlag
 	var llf LatLngFlag
 	var t time.Time
 	var ll wtwi.LatLng
 
+	flag.StringVar(&key, "key", "", "DarkySky API Key")
 	flag.Var(&llf, "latlng", "latitude and longitude to query weather information for")
 	flag.Var(&tf, "time", "time to query weather information for")
 
@@ -70,7 +72,7 @@ func main() {
 		exit(fmt.Errorf("latlng required"))
 	}
 
-	w, err := wtwi.Get(ll, t)
+	w, err := wtwi.Get(ll, t, key)
 	if err != nil {
 		exit(err)
 	}

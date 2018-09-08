@@ -3,18 +3,21 @@ package wtwi
 import (
 	"fmt"
 	"math"
+	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/adlio/darksky"
 )
 
 type LatLng struct {
-	Lat float64
-	Lng float64
+	Lat string
+	Lng string
 }
 
 func (ll LatLng) String() string {
-	return fmt.Sprintf("%.6f,%.6f", ll.Lat, ll.Lng)
+	return fmt.Sprintf("%s,s", ll.Lng, ll.Lng)
 }
 
 func ParseLatLng(s string) (LatLng, error) {
@@ -23,12 +26,16 @@ func ParseLatLng(s string) (LatLng, error) {
 		return LatLng{}, fmt.Errorf("expected 'latitude,longitude' pair")
 	}
 
-	lat, err := strconv.ParseFloat(strings.TrimSpace(sp[0]), 64)
+	// NOTE: We want to ensure what we parsed are valid floats, but we don't
+	// store the coordinates as floats to avoid precision issues.
+	lat := strings.TrimSpace(sp[0])
+	_, err := strconv.ParseFloat(lat, 64)
 	if err != nil {
 		return LatLng{}, err
 	}
 
-	lng, err := strconv.ParseFloat(strings.TrimSpace(sp[1]), 64)
+	lng := strings.TrimSpace(sp[1])
+	_, err = strconv.ParseFloat(lng, 64)
 	if err != nil {
 		return LatLng{}, err
 	}
@@ -52,22 +59,36 @@ func (w Weather) String() string {
 		round(w.AirDensity, 0.001))
 }
 
-func Get(ll LatLng, t time.Time) (Weather, error) {
-	// TODO actually query
-	T := 18.944
-	p := 1010.34      // hPa
-	dp := 15.9383     // C
-	ws := 3.221467    // m/s
-	wb := -745.214879 // °
-
-	w := Weather{
-		Temperature: T,
-		AirDensity:  rho(T, p, dp), // 1.1968
-		WindSpeed:   ws,
-		WindBearing: wb,
+func Get(ll LatLng, t time.Time, keys ...string) (*Weather, error) {
+	key := os.Getenv("DARKSKY_APIKEY")
+	if len(keys) > 0 && keys[0] != "" {
+		key = keys[0]
+	}
+	if key == "" {
+		return nil, fmt.Errorf("must provide a DarkSky API key")
 	}
 
-	return w, nil
+	client := darksky.NewClient(key)
+	f, err := client.GetTimeMachineForecast(ll.Lat, ll.Lng, t, darksky.Arguments{"units": "si"})
+	if err != nil {
+		return nil, err
+	}
+
+	// BUG: These values are marked 'optional' by DarkSky, so it could return
+	// nothing for one of these and we would mistake it for 0 (which is otherwise
+	// a completely valid data point).
+	T := f.Currently.Temperature
+	p := f.Currently.Pressure
+	dp := f.Currently.DewPoint
+	ws := f.Currently.WindSpeed
+	wb := f.Currently.WindBearing
+
+	return &Weather{
+		Temperature: T,
+		AirDensity:  rho(T, p, dp),
+		WindSpeed:   ws,
+		WindBearing: wb,
+	}, nil
 }
 
 func rho(t, p, dp float64) float64 {
