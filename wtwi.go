@@ -86,8 +86,6 @@ func Get(ll LatLng, t time.Time, keys ...string) (*Weather, error) {
 	ws := f.Currently.WindSpeed
 	wb := f.Currently.WindBearing
 
-	println(bearingString(-1), bearingString(11.25), bearingString(181))
-
 	return &Weather{
 		Temperature: T,
 		AirDensity:  rho(T, p, dp),
