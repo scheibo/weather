@@ -1,4 +1,4 @@
-package wtwi
+package weather
 
 import (
 	"fmt"

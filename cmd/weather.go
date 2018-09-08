@@ -1,4 +1,4 @@
-// wtwi provides a CLI for querying what temperature it was at a particular time
+// weather provides a CLI for querying what temperature it was at a particular time
 package main
 
 import (
@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/araddon/dateparse"
-	"github.com/scheibo/wtwi"
+	"github.com/scheibo/weather"
 )
 
 type TimeFlag struct {
@@ -30,7 +30,7 @@ func (t *TimeFlag) Set(v string) error {
 }
 
 type LatLngFlag struct {
-	LatLng *wtwi.LatLng
+	LatLng *weather.LatLng
 }
 
 func (ll *LatLngFlag) String() string {
@@ -38,7 +38,7 @@ func (ll *LatLngFlag) String() string {
 }
 
 func (ll *LatLngFlag) Set(v string) error {
-	latlng, err := wtwi.ParseLatLng(v)
+	latlng, err := weather.ParseLatLng(v)
 	if err != nil {
 		return err
 	}
@@ -52,7 +52,7 @@ func main() {
 	var tf TimeFlag
 	var llf LatLngFlag
 	var t time.Time
-	var ll wtwi.LatLng
+	var ll weather.LatLng
 
 	flag.StringVar(&key, "key", "", "DarkySky API Key")
 	flag.Var(&llf, "latlng", "latitude and longitude to query weather information for")
@@ -72,7 +72,7 @@ func main() {
 		exit(fmt.Errorf("latlng required"))
 	}
 
-	w, err := wtwi.Get(ll, t, key)
+	w, err := weather.Get(ll, t, key)
 	if err != nil {
 		exit(err)
 	}
