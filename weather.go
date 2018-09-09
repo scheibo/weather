@@ -1,97 +1,104 @@
 package weather
 
 import (
-	"fmt"
 	"math"
 	"os"
-	"strconv"
-	"strings"
 	"time"
 
-	"github.com/adlio/darksky"
+	"github.com/scheibo/geo"
 )
 
-type LatLng struct {
-	Lat, Lng float64
+
+type Client struct {
+	provider *provider
 }
 
-func (ll LatLng) String() string {
-	return fmt.Sprintf("%s,%s", ll.Latitude(), ll.Longitude())
+type provider interface {
+	current(ll geo.LatLng) (*Conditions, error)
+	forecast(ll geo.LatLng) (*Forecast, error)
+	history(ll geo.LatLng, t time.Time) (*Conditions, error)
 }
 
-func (ll *LatLng) Latitude() string {
-	return fmt.Sprintf("%.6f", ll.Lat)
+type Forecast struct {
+	Hourly []*Conditions // TODO(kjs): include timestamps?
+	Daily []*Conditions
 }
 
-func (ll *LatLng) Longitude() string {
-	return fmt.Sprintf("%.6f", ll.Lng)
-}
-
-func ParseLatLng(s string) (LatLng, error) {
-	sp := strings.Split(s, ",")
-	if len(sp) != 2 {
-		return LatLng{}, fmt.Errorf("expected 'latitude,longitude' pair")
+func NewClient(opts ...func(*options)) (*Client, error) {
+	options := &options{
+		ds: keyWeight{ key: os.Getenv("DARKSKY_API_KEY") },
+		wu: keyWeight{ key: os.Getenv("WUNDERGROUND_API_KEY"), },
+		noaa: keyWeight{ key: os.Getenv("NOAA_API_KEY"), },
+		owm: keyWeight{ key: os.Getenv("OWM_API_KEY"), },
 	}
 
-	lat, err := strconv.ParseFloat(strings.TrimSpace(sp[0]), 64)
-	if err != nil {
-		return LatLng{}, err
+	for _, opt := range opts {
+		opt(options)
 	}
+	options = adjustWeights(options)
 
-	lng, err := strconv.ParseFloat(strings.TrimSpace(sp[1]), 64)
-	if err != nil {
-		return LatLng{}, err
-	}
-
-	return LatLng{Lat: lat, Lng: lng}, nil
-}
-
-type Weather struct {
-	Temperature float64 `json:"temperature,omitempty"`
-	AirDensity  float64 `json:"airDensity,omitempty"`
-	WindSpeed   float64 `json:"windSpeed,omitempty"`
-	WindBearing float64 `json:"windBearing,omitempty"`
-}
-
-func (w Weather) String() string {
-	return fmt.Sprintf(
-		"temp: %.1f °C, wind: %.1f km/h %s, density: %.3f kg/m³",
-		round(w.Temperature, 0.1),
-		round(w.WindSpeed*3600.0/1000.0, 0.1),
-		bearingString(w.WindBearing),
-		round(w.AirDensity, 0.001))
-}
-
-func Get(ll LatLng, t time.Time, keys ...string) (*Weather, error) {
-	key := os.Getenv("DARKSKY_APIKEY")
-	if len(keys) > 0 && keys[0] != "" {
-		key = keys[0]
-	}
-	if key == "" {
-		return nil, fmt.Errorf("must provide a DarkSky API key")
-	}
-
-	client := darksky.NewClient(key)
-	f, err := client.GetTimeMachineForecast(ll.Latitude(), ll.Longitude(), t, darksky.Arguments{"units": "si"})
+	provider, err := newEnsembleProvider(options)
 	if err != nil {
 		return nil, err
 	}
 
-	// BUG: These values are marked 'optional' by DarkSky, so it could return
-	// nothing for one of these and we would mistake it for 0 (which is otherwise
-	// a completely valid data point).
-	T := f.Currently.Temperature
-	p := f.Currently.Pressure
-	dp := f.Currently.DewPoint
-	ws := f.Currently.WindSpeed
-	wb := f.Currently.WindBearing
+	return &Client{provider: provider}, nil
+}
 
-	return &Weather{
-		Temperature: T,
-		AirDensity:  rho(T, p, dp),
-		WindSpeed:   ws,
-		WindBearing: wb,
-	}, nil
+func DarkSky(key string, weight ...float64) func(*options) {
+	return func(opts *options) {
+		opts.ds.key = key
+		if len(weight) > 0 {
+			opts.ds.weight = weight[0]
+		}
+	}
+}
+
+func Wunderground(key string, weight ...float64) func(*options) {
+	return func(opts *options) {
+		opts.wu.key = key
+		if len(weight) > 0 {
+			opts.wu.weight = weight[0]
+		}
+	}
+}
+
+func NOAA(key string, weight ...float64) func(*options) {
+	return func(opts *options) {
+		opts.noaa.key = key
+		if len(weight) > 0 {
+			opts.noaa.weight = weight[0]
+		}
+	}
+}
+
+func OpenWeatherMap(key string, weight ...float64) func(*options) {
+	return func(opts *options) {
+		opts.owm.key = key
+		if len(weight) > 0 {
+			opts.owm.weight = weight[0]
+		}
+	}
+}
+
+func (c *Client) Current(ll geo.LatLng) (*Conditions, error) {
+	return c.provider.current(ll)
+}
+
+func (c *Client) Now(ll geo.LatLng) (*Conditions, error) {
+	return c.Current(ll)
+}
+
+func (c *Client) Forecast(ll geo.LatLng) (*Forecast, error) {
+	return c.provider.forecast(ll)
+}
+
+func (c *Client) History(ll geo.LatLng, t time.Time) (*Conditions, error) {
+	return c.provider.history(ll, t)
+}
+
+func (c *Client) At(ll geo.LatLng, t time.Time) (*Conditions, error) {
+	return c.History(ll, t)
 }
 
 func rho(t, p, dp float64) float64 {
@@ -116,25 +123,4 @@ func rho(t, p, dp float64) float64 {
 
 	return 100 * (((p - pv) / (Rd * (t + K))) +
 		(pv / (Rv * (t + K))))
-}
-
-func bearingString(wb float64) string {
-	var COMPASS = []string{
-		"N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
-		"S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW",
-	}
-
-	nwb := normalizeBearing(wb)
-	index := int(math.Mod((nwb+11.25)/22.5, 16))
-	dir := COMPASS[index]
-
-	return fmt.Sprintf("%s (%.1f°)", dir, round(nwb, 0.5))
-}
-
-func round(x, unit float64) float64 {
-	return math.Round(x/unit) * unit
-}
-
-func normalizeBearing(d float64) float64 {
-	return d + math.Ceil(-d/360)*360
 }

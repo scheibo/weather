@@ -10,6 +10,7 @@ import (
 
 	"github.com/araddon/dateparse"
 	"github.com/scheibo/weather"
+	"github.com/scheibo/geo"
 )
 
 type TimeFlag struct {
@@ -30,7 +31,7 @@ func (t *TimeFlag) Set(v string) error {
 }
 
 type LatLngFlag struct {
-	LatLng *weather.LatLng
+	LatLng *geo.LatLng
 }
 
 func (ll *LatLngFlag) String() string {
@@ -38,7 +39,7 @@ func (ll *LatLngFlag) String() string {
 }
 
 func (ll *LatLngFlag) Set(v string) error {
-	latlng, err := weather.ParseLatLng(v)
+	latlng, err := geo.ParseLatLng(v)
 	if err != nil {
 		return err
 	}
@@ -52,7 +53,7 @@ func main() {
 	var tf TimeFlag
 	var llf LatLngFlag
 	var t time.Time
-	var ll weather.LatLng
+	var ll geo.LatLng
 
 	flag.StringVar(&key, "key", "", "DarkySky API Key")
 	flag.Var(&llf, "latlng", "latitude and longitude to query weather information for")
