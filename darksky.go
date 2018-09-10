@@ -8,16 +8,16 @@ import (
 	"github.com/scheibo/geo"
 )
 
-type darkSkyProvider {
-  client darksky.Client
+type darkSkyProvider struct {
+	client *darksky.Client
 }
 
 func newDarkSkyProvider(key string) *darkSkyProvider {
-	return &darkSkyProvider{client: darkSky.NewClient(key)}
+	return &darkSkyProvider{client: darksky.NewClient(key)}
 }
 
-var darkSkyCurrentArguments = darksky.Arguments{"excludes":"minutely,hourly,daily,alerts,flags","units": "si"}
-var darkSkyCurrentArguments = darksky.Arguments{"excludes":"minutely,alerts,flags","units": "si"}
+var darkSkyCurrentArguments = darksky.Arguments{"excludes": "minutely,hourly,daily,alerts,flags", "units": "si"}
+var darkSkyForecastArguments = darksky.Arguments{"excludes": "minutely,alerts,flags", "units": "si"}
 var darkSkyHistoryArguments = darkSkyCurrentArguments
 
 func (w *darkSkyProvider) current(ll geo.LatLng) (*Conditions, error) {
@@ -29,17 +29,35 @@ func (w *darkSkyProvider) current(ll geo.LatLng) (*Conditions, error) {
 }
 
 func (w *darkSkyProvider) forecast(ll geo.LatLng) (*Forecast, error) {
-	f, err := w.client.GetForecast(geo.Coordinate(ll.Lat), geo.Coordinate(ll.Lng), darkSkyCurrentArguments)
+	f, err := w.client.GetForecast(geo.Coordinate(ll.Lat), geo.Coordinate(ll.Lng), darkSkyForecastArguments)
 	if err != nil {
 		return nil, err
 	}
 
-	// TODO
-	return nil, nil
+	forecast := Forecast{}
+	forecast.Currently = w.toConditions(f.Currently)
+
+	if len(f.Hourly.Data) < 24 {
+		return nil, fmt.Errorf("not enough hours returned in forecast")
+	}
+
+	for i := 0; i < 24; i++ {
+		forecast.Hourly = append(forecast.Hourly, w.toConditions(&f.Hourly.Data[i]))
+	}
+
+	if len(f.Daily.Data) < 7 {
+		return nil, fmt.Errorf("not enough days returned in forecast")
+	}
+
+	for i := 0; i < 7; i++ {
+		forecast.Daily = append(forecast.Daily, w.toConditions(&f.Daily.Data[i]))
+	}
+
+	return &forecast, nil
 }
 
 func (w *darkSkyProvider) history(ll geo.LatLng, t time.Time) (*Conditions, error) {
-	f, err := w.client.GetTimeMachineForecast(geo.Coordinate(ll.Lat), geo.Coordinate(ll.Lng), t,darkSkyHistoryArguments)
+	f, err := w.client.GetTimeMachineForecast(geo.Coordinate(ll.Lat), geo.Coordinate(ll.Lng), t, darkSkyHistoryArguments)
 	if err != nil {
 		return nil, err
 	}
@@ -51,15 +69,14 @@ func (w *darkSkyProvider) toConditions(dp *darksky.DataPoint) *Conditions {
 	// nothing for one of these and we would mistake it for 0 (which is otherwise
 	// a completely valid data point).
 	return &Conditions{
-		Temperature: dp.Temperature,
-		Humidity: dp.Humidity,
-		PrecipProbability: dp.Probability,
-		PrecipIntensity: dp.Intensity,
-		AirPressure:  dp.Pressure,
-		AirDensity:  rho(dp.Temperature, dp.Pressure, dp.DewPoint),
-		WindSpeed:   dp.WindSpeed,
-		WindGust:   dp.WindGust,
-		WindBearing: dp.WindBearing,
-		UVIndex: dp.UVIndex,
+		Time:              dp.Time.Time,
+		Temperature:       dp.Temperature,
+		Humidity:          dp.Humidity,
+		PrecipProbability: dp.PrecipProbability,
+		PrecipIntensity:   dp.PrecipIntensity,
+		AirPressure:       dp.Pressure,
+		AirDensity:        rho(dp.Temperature, dp.Pressure, dp.DewPoint),
+		WindSpeed:         dp.WindSpeed,
+		WindBearing:       dp.WindBearing,
 	}
 }

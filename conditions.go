@@ -3,41 +3,38 @@ package weather
 import (
 	"fmt"
 	"math"
+	"time"
 )
 
 const msToKmh = 3600.0 / 1000.0
 
+// TODO(kjs): add support for WindGust and UVIndex
 type Conditions struct {
-	//Icon string `json:"icon",omitempty"`
-	Temperature float64 `json:"temperature,omitempty"`
-	Humidity float64 `json:"humidity,omitempty"`
-	PrecipProbability float64 `json:"precipProbability,omitempty"`
-	PrecipIntensity float64 `json:"precipIntensity,omitempty"`
-	AirPressure float64 `json:"airPressure,omitempty"`
-	AirDensity  float64 `json:"airDensity,omitempty"`
-	WindSpeed   float64 `json:"windSpeed,omitempty"`
-	WindGust   float64 `json:"windGust,omitempty"`
-	WindBearing float64 `json:"windBearing,omitempty"`
-	UVIndex float64 `json:"uvIndex,omitempty"`
+	Time              time.Time `json:"time",omitempty"`
+	Temperature       float64   `json:"temperature,omitempty"`
+	Humidity          float64   `json:"humidity,omitempty"`
+	PrecipProbability float64   `json:"precipProbability,omitempty"`
+	PrecipIntensity   float64   `json:"precipIntensity,omitempty"`
+	AirPressure       float64   `json:"airPressure,omitempty"`
+	AirDensity        float64   `json:"airDensity,omitempty"`
+	WindSpeed         float64   `json:"windSpeed,omitempty"`
+	WindBearing       float64   `json:"windBearing,omitempty"`
 }
 
 func (c *Conditions) String() string {
 	return fmt.Sprintf(
-		"temp: %.1f °C (humidity: %d%%)" +
-		"precip: %d%% %.3f mm/h" +
-		"wind: %.1f km/h (gust: %.1f km/h) %s" +
-		"density: %.3f kg/m³ (pressure: %.2f mbar)" +
-		"uvIndex: %d",
+		"temp: %.1f °C (humidity: %d%%)\n"+
+			"precip: %d%% %.3f mm/h\n"+
+			"wind: %.1f km/h %s\n"+
+			"density: %.3f kg/m³ (pressure: %.2f mbar)",
 		round(c.Temperature, 0.1),
-		int(c.Humidity * 100),
-		int(c.PrecipProbability * 100),
-		round(c.PreciptIntensity, 0.001),
+		int(c.Humidity*100),
+		int(c.PrecipProbability*100),
+		round(c.PrecipIntensity, 0.001),
 		round(c.WindSpeed*msToKmh, 0.1),
-		round(c.WindGust*msToKmh, 0.1),
 		bearingString(c.WindBearing),
 		round(c.AirDensity, 0.001),
-		round(c.AirPressure, 0.01)
-		int(c.UvIndex))
+		round(c.AirPressure, 0.01))
 }
 
 func bearingString(wb float64) string {

@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/araddon/dateparse"
-	"github.com/scheibo/weather"
 	"github.com/scheibo/geo"
+	"github.com/scheibo/weather"
 )
 
 type TimeFlag struct {
@@ -73,11 +73,13 @@ func main() {
 		exit(fmt.Errorf("latlng required"))
 	}
 
-	w, err := weather.Get(ll, t, key)
+	w := weather.NewClient(weather.DarkSky(key))
+
+	c, err := w.History(ll, t)
 	if err != nil {
 		exit(err)
 	}
-	fmt.Println(w)
+	fmt.Println(c)
 }
 
 func exit(err error) {

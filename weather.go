@@ -8,9 +8,8 @@ import (
 	"github.com/scheibo/geo"
 )
 
-
 type Client struct {
-	provider *provider
+	provider provider
 }
 
 type provider interface {
@@ -19,64 +18,30 @@ type provider interface {
 	history(ll geo.LatLng, t time.Time) (*Conditions, error)
 }
 
-type Forecast struct {
-	Hourly []*Conditions // TODO(kjs): include timestamps?
-	Daily []*Conditions
+type options struct {
+	darkSkyKey string
 }
 
-func NewClient(opts ...func(*options)) (*Client, error) {
-	options := &options{
-		ds: keyWeight{ key: os.Getenv("DARKSKY_API_KEY") },
-		wu: keyWeight{ key: os.Getenv("WUNDERGROUND_API_KEY"), },
-		noaa: keyWeight{ key: os.Getenv("NOAA_API_KEY"), },
-		owm: keyWeight{ key: os.Getenv("OWM_API_KEY"), },
-	}
+type Forecast struct {
+	Currently *Conditions
+	Hourly    []*Conditions
+	Daily     []*Conditions
+}
+
+func NewClient(opts ...func(*options)) *Client {
+	options := &options{darkSkyKey: os.Getenv("DARKSKY_API_KEY")}
 
 	for _, opt := range opts {
 		opt(options)
 	}
-	options = adjustWeights(options)
 
-	provider, err := newEnsembleProvider(options)
-	if err != nil {
-		return nil, err
-	}
-
-	return &Client{provider: provider}, nil
+	return &Client{provider: newDarkSkyProvider(options.darkSkyKey)}
 }
 
-func DarkSky(key string, weight ...float64) func(*options) {
+func DarkSky(key string) func(*options) {
 	return func(opts *options) {
-		opts.ds.key = key
-		if len(weight) > 0 {
-			opts.ds.weight = weight[0]
-		}
-	}
-}
-
-func Wunderground(key string, weight ...float64) func(*options) {
-	return func(opts *options) {
-		opts.wu.key = key
-		if len(weight) > 0 {
-			opts.wu.weight = weight[0]
-		}
-	}
-}
-
-func NOAA(key string, weight ...float64) func(*options) {
-	return func(opts *options) {
-		opts.noaa.key = key
-		if len(weight) > 0 {
-			opts.noaa.weight = weight[0]
-		}
-	}
-}
-
-func OpenWeatherMap(key string, weight ...float64) func(*options) {
-	return func(opts *options) {
-		opts.owm.key = key
-		if len(weight) > 0 {
-			opts.owm.weight = weight[0]
+		if key != "" {
+			opts.darkSkyKey = key
 		}
 	}
 }
