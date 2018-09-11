@@ -1,7 +1,6 @@
 package weather
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/scheibo/darksky"
@@ -40,22 +39,9 @@ func (w *darkSkyProvider) forecast(ll geo.LatLng) (*Forecast, error) {
 	}
 
 	forecast := Forecast{}
-	forecast.Currently = w.toConditions(f.Currently)
-
-	//if len(f.Hourly.Data) < 168 {
-	//	return nil, fmt.Errorf("not enough hours returned in forecast")
-	//}
 
 	for _, h := range f.Hourly.Data {
 		forecast.Hourly = append(forecast.Hourly, w.toConditions(&h))
-	}
-
-	//if len(f.Daily.Data) < 7 {
-	//	return nil, fmt.Errorf("not enough days returned in forecast")
-	//}
-
-	for _, d := range f.Daily.Data {
-		forecast.Daily = append(forecast.Daily, w.toConditions(&d))
 	}
 
 	return &forecast, nil
@@ -74,18 +60,20 @@ func (w *darkSkyProvider) toConditions(dp *darksky.DataPoint) *Conditions {
 	// nothing for one of these and we would mistake it for 0 (which is otherwise
 	// a completely valid data point).
 	return &Conditions{
-		Icon:              dp.Icon,
-		Time:              dp.Time.Time,
-		Temperature:       dp.Temperature,
-		Humidity:          dp.Humidity,
-		PrecipProbability: dp.PrecipProbability,
-		PrecipIntensity:   dp.PrecipIntensity,
-		AirPressure:       dp.Pressure,
-		AirDensity:        rho(dp.Temperature, dp.Pressure, dp.DewPoint),
-		CloudCover:        dp.CloudCover,
-		UVIndex:           dp.UVIndex,
-		WindSpeed:         dp.WindSpeed,
-		WindGust:          dp.WindGust,
-		WindBearing:       dp.WindBearing,
+		Icon:                dp.Icon,
+		Time:                dp.Time.Time,
+		Temperature:         dp.Temperature,
+		ApparentTemperature: dp.ApparentTemperature,
+		Humidity:            dp.Humidity,
+		PrecipProbability:   dp.PrecipProbability,
+		PrecipIntensity:     dp.PrecipIntensity,
+		PrecipType:          dp.PrecipType,
+		AirPressure:         dp.Pressure,
+		AirDensity:          rho(dp.Temperature, dp.Pressure, dp.DewPoint),
+		CloudCover:          dp.CloudCover,
+		UVIndex:             dp.UVIndex,
+		WindSpeed:           dp.WindSpeed,
+		WindGust:            dp.WindGust,
+		WindBearing:         dp.WindBearing,
 	}
 }

@@ -23,9 +23,7 @@ type options struct {
 }
 
 type Forecast struct {
-	Currently *Conditions
-	Hourly    []*Conditions
-	Daily     []*Conditions
+	Hourly []*Conditions
 }
 
 func NewClient(opts ...func(*options)) *Client {
