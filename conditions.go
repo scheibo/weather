@@ -49,7 +49,7 @@ func (c *Conditions) String() string {
 		round(c.ApparentTemperature, 0.1),
 		round(c.WindSpeed*msToKmh, 0.1),
 		round(c.WindGust*msToKmh, 0.1),
-		bearingString(c.WindBearing),
+		c.WindDirection(),
 		round(c.AirDensity, 0.001),
 		round(c.AirPressure, 0.01),
 		precip,
@@ -57,13 +57,13 @@ func (c *Conditions) String() string {
 		int(c.CloudCover*100))
 }
 
-func bearingString(wb float64) string {
+func (c *Conditions) WindDirection() string {
 	var COMPASS = []string{
 		"N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
 		"S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW",
 	}
 
-	nwb := normalizeBearing(wb)
+	nwb := normalizeBearing(c.WindBearing)
 	index := int(math.Mod((nwb+11.25)/22.5, 16))
 	dir := COMPASS[index]
 
