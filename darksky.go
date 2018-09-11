@@ -4,9 +4,14 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/adlio/darksky"
+	"github.com/scheibo/darksky"
 	"github.com/scheibo/geo"
 )
+
+var ICONS = []string{
+	"clear-day", "clear-night", "rain", "snow", "sleet", "wind",
+	"fog", "cloudy", "partly-cloudy-day", "partly-cloudy-night",
+}
 
 type darkSkyProvider struct {
 	client *darksky.Client
@@ -17,7 +22,7 @@ func newDarkSkyProvider(key string) *darkSkyProvider {
 }
 
 var darkSkyCurrentArguments = darksky.Arguments{"excludes": "minutely,hourly,daily,alerts,flags", "units": "si"}
-var darkSkyForecastArguments = darksky.Arguments{"excludes": "minutely,alerts,flags", "units": "si"}
+var darkSkyForecastArguments = darksky.Arguments{"excludes": "minutely,alerts,flags", "extend": "hourly", "units": "si"}
 var darkSkyHistoryArguments = darkSkyCurrentArguments
 
 func (w *darkSkyProvider) current(ll geo.LatLng) (*Conditions, error) {
@@ -37,20 +42,20 @@ func (w *darkSkyProvider) forecast(ll geo.LatLng) (*Forecast, error) {
 	forecast := Forecast{}
 	forecast.Currently = w.toConditions(f.Currently)
 
-	if len(f.Hourly.Data) < 24 {
-		return nil, fmt.Errorf("not enough hours returned in forecast")
+	//if len(f.Hourly.Data) < 168 {
+	//	return nil, fmt.Errorf("not enough hours returned in forecast")
+	//}
+
+	for _, h := range f.Hourly.Data {
+		forecast.Hourly = append(forecast.Hourly, w.toConditions(&h))
 	}
 
-	for i := 0; i < 24; i++ {
-		forecast.Hourly = append(forecast.Hourly, w.toConditions(&f.Hourly.Data[i]))
-	}
+	//if len(f.Daily.Data) < 7 {
+	//	return nil, fmt.Errorf("not enough days returned in forecast")
+	//}
 
-	if len(f.Daily.Data) < 7 {
-		return nil, fmt.Errorf("not enough days returned in forecast")
-	}
-
-	for i := 0; i < 7; i++ {
-		forecast.Daily = append(forecast.Daily, w.toConditions(&f.Daily.Data[i]))
+	for _, d := range f.Daily.Data {
+		forecast.Daily = append(forecast.Daily, w.toConditions(&d))
 	}
 
 	return &forecast, nil
@@ -69,6 +74,7 @@ func (w *darkSkyProvider) toConditions(dp *darksky.DataPoint) *Conditions {
 	// nothing for one of these and we would mistake it for 0 (which is otherwise
 	// a completely valid data point).
 	return &Conditions{
+		Icon:              dp.Icon,
 		Time:              dp.Time.Time,
 		Temperature:       dp.Temperature,
 		Humidity:          dp.Humidity,
@@ -76,7 +82,10 @@ func (w *darkSkyProvider) toConditions(dp *darksky.DataPoint) *Conditions {
 		PrecipIntensity:   dp.PrecipIntensity,
 		AirPressure:       dp.Pressure,
 		AirDensity:        rho(dp.Temperature, dp.Pressure, dp.DewPoint),
+		CloudCover:        dp.CloudCover,
+		UVIndex:           dp.UVIndex,
 		WindSpeed:         dp.WindSpeed,
+		WindGust:          dp.WindGust,
 		WindBearing:       dp.WindBearing,
 	}
 }
