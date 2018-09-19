@@ -20,6 +20,7 @@ type provider interface {
 
 type options struct {
 	darkSkyKey string
+	timezone   *time.Location
 }
 
 type Forecast struct {
@@ -27,19 +28,32 @@ type Forecast struct {
 }
 
 func NewClient(opts ...func(*options)) *Client {
-	options := &options{darkSkyKey: os.Getenv("DARKSKY_API_KEY")}
+	options := &options{
+		darkSkyKey: os.Getenv("DARKSKY_API_KEY"),
+		timezone:   time.UTC,
+	}
 
 	for _, opt := range opts {
 		opt(options)
 	}
 
-	return &Client{provider: newDarkSkyProvider(options.darkSkyKey)}
+	return &Client{
+		provider: newDarkSkyProvider(options.darkSkyKey, options.timezone),
+	}
 }
 
 func DarkSky(key string) func(*options) {
 	return func(opts *options) {
 		if key != "" {
 			opts.darkSkyKey = key
+		}
+	}
+}
+
+func TimeZone(loc *time.Location) func(*options) {
+	return func(opts *options) {
+		if loc != nil {
+			opts.timezone = loc
 		}
 	}
 }
