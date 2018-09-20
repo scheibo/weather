@@ -34,7 +34,7 @@ func (w *darkSkyProvider) current(ll geo.LatLng) (*Conditions, error) {
 	if len(f.Daily.Data) < 1 {
 		return nil, fmt.Errorf("missing daily data")
 	}
-	return w.toConditions(f.Currently, &f.Daily.Data[0]), nil
+	return DarkSkyToConditions(f.Currently, &f.Daily.Data[0], w.loc), nil
 }
 
 func (w *darkSkyProvider) forecast(ll geo.LatLng) (*Forecast, error) {
@@ -52,7 +52,7 @@ func (w *darkSkyProvider) forecast(ll geo.LatLng) (*Forecast, error) {
 	forecast := Forecast{}
 	for _, h := range f.Hourly.Data {
 		d, _ := days[h.Time.Time.In(w.loc).YearDay()]
-		forecast.Hourly = append(forecast.Hourly, w.toConditions(&h, d))
+		forecast.Hourly = append(forecast.Hourly, DarkSkyToConditions(&h, d, w.loc))
 	}
 
 	return &forecast, nil
@@ -66,16 +66,16 @@ func (w *darkSkyProvider) history(ll geo.LatLng, t time.Time) (*Conditions, erro
 	if len(f.Daily.Data) < 1 {
 		return nil, fmt.Errorf("missing daily data")
 	}
-	return w.toConditions(f.Currently, &f.Daily.Data[0]), nil
+	return DarkSkyToConditions(f.Currently, &f.Daily.Data[0], w.loc), nil
 }
 
-func (w *darkSkyProvider) toConditions(h *darksky.DataPoint, d *darksky.DataPoint) *Conditions {
+func DarkSkyToConditions(h *darksky.DataPoint, d *darksky.DataPoint, loc *time.Location) *Conditions {
 	// BUG: These values are marked 'optional' by DarkSky, so it could return
 	// nothing for one of these and we would mistake it for 0 (which is otherwise
 	// a completely valid data point).
 	c := Conditions{
 		Icon:                h.Icon,
-		Time:                h.Time.Time.In(w.loc),
+		Time:                h.Time.Time.In(loc),
 		Temperature:         h.Temperature,
 		ApparentTemperature: h.ApparentTemperature,
 		Humidity:            h.Humidity,
@@ -91,8 +91,8 @@ func (w *darkSkyProvider) toConditions(h *darksky.DataPoint, d *darksky.DataPoin
 		WindBearing:         h.WindBearing,
 	}
 	if d != nil {
-		c.SunriseTime = time.Unix(int64(d.SunriseTime), 0).In(w.loc)
-		c.SunsetTime = time.Unix(int64(d.SunsetTime), 0).In(w.loc)
+		c.SunriseTime = time.Unix(int64(d.SunriseTime), 0).In(loc)
+		c.SunsetTime = time.Unix(int64(d.SunsetTime), 0).In(loc)
 	}
 	return &c
 }
