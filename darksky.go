@@ -13,36 +13,32 @@ var ICONS = []string{
 	"fog", "cloudy", "partly-cloudy-day", "partly-cloudy-night",
 }
 
-type DarkSkyProvider struct {
+type darkSkyProvider struct {
 	client *darksky.Client
 	loc    *time.Location
 }
 
-func NewDarkSkyProvider(key string, tz ...*time.Location) *DarkSkyProvider {
-	loc := time.UTC
-	if len(tz) > 0 && tz[0] != nil {
-		loc = tz[0]
-	}
-	return &DarkSkyProvider{client: darksky.NewClient(key), loc: loc}
+func newDarkSkyProvider(key string, loc *time.Location) *darkSkyProvider {
+	return &darkSkyProvider{client: darksky.NewClient(key), loc: loc}
 }
 
-var DarkSkyCurrentArguments = darksky.Arguments{"excludes": "minutely,hourly,alerts,flags", "units": "si"}
-var DarkSkyForecastArguments = darksky.Arguments{"excludes": "minutely,alerts,flags", "extend": "hourly", "units": "si"}
-var DarkSkyHistoryArguments = DarkSkyCurrentArguments
+var darkSkyCurrentArguments = darksky.Arguments{"excludes": "minutely,hourly,alerts,flags", "units": "si"}
+var darkSkyForecastArguments = darksky.Arguments{"excludes": "minutely,alerts,flags", "extend": "hourly", "units": "si"}
+var darkSkyHistoryArguments = darkSkyCurrentArguments
 
-func (w *DarkSkyProvider) Current(ll geo.LatLng) (*Conditions, error) {
-	f, err := w.client.GetForecast(geo.Coordinate(ll.Lat), geo.Coordinate(ll.Lng), DarkSkyCurrentArguments)
+func (w *darkSkyProvider) current(ll geo.LatLng) (*Conditions, error) {
+	f, err := w.client.GetForecast(geo.Coordinate(ll.Lat), geo.Coordinate(ll.Lng), darkSkyCurrentArguments)
 	if err != nil {
 		return nil, err
 	}
 	if len(f.Daily.Data) < 1 {
 		return nil, fmt.Errorf("missing daily data")
 	}
-	return w.ToConditions(f.Currently, &f.Daily.Data[0]), nil
+	return w.toConditions(f.Currently, &f.Daily.Data[0]), nil
 }
 
-func (w *DarkSkyProvider) Forecast(ll geo.LatLng) (*Forecast, error) {
-	f, err := w.client.GetForecast(geo.Coordinate(ll.Lat), geo.Coordinate(ll.Lng), DarkSkyForecastArguments)
+func (w *darkSkyProvider) forecast(ll geo.LatLng) (*Forecast, error) {
+	f, err := w.client.GetForecast(geo.Coordinate(ll.Lat), geo.Coordinate(ll.Lng), darkSkyForecastArguments)
 	if err != nil {
 		return nil, err
 	}
@@ -56,24 +52,24 @@ func (w *DarkSkyProvider) Forecast(ll geo.LatLng) (*Forecast, error) {
 	forecast := Forecast{}
 	for _, h := range f.Hourly.Data {
 		d, _ := days[h.Time.Time.In(w.loc).YearDay()]
-		forecast.Hourly = append(forecast.Hourly, w.ToConditions(&h, d))
+		forecast.Hourly = append(forecast.Hourly, w.toConditions(&h, d))
 	}
 
 	return &forecast, nil
 }
 
-func (w *DarkSkyProvider) History(ll geo.LatLng, t time.Time) (*Conditions, error) {
-	f, err := w.client.GetTimeMachineForecast(geo.Coordinate(ll.Lat), geo.Coordinate(ll.Lng), t, DarkSkyHistoryArguments)
+func (w *darkSkyProvider) history(ll geo.LatLng, t time.Time) (*Conditions, error) {
+	f, err := w.client.GetTimeMachineForecast(geo.Coordinate(ll.Lat), geo.Coordinate(ll.Lng), t, darkSkyHistoryArguments)
 	if err != nil {
 		return nil, err
 	}
 	if len(f.Daily.Data) < 1 {
 		return nil, fmt.Errorf("missing daily data")
 	}
-	return w.ToConditions(f.Currently, &f.Daily.Data[0]), nil
+	return w.toConditions(f.Currently, &f.Daily.Data[0]), nil
 }
 
-func (w *DarkSkyProvider) ToConditions(h *darksky.DataPoint, d *darksky.DataPoint) *Conditions {
+func (w *darkSkyProvider) toConditions(h *darksky.DataPoint, d *darksky.DataPoint) *Conditions {
 	// BUG: These values are marked 'optional' by DarkSky, so it could return
 	// nothing for one of these and we would mistake it for 0 (which is otherwise
 	// a completely valid data point).

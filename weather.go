@@ -9,19 +9,18 @@ import (
 )
 
 type Client struct {
-	provider Provider
+	provider provider
 }
 
-type Provider interface {
-	Current(ll geo.LatLng) (*Conditions, error)
-	Forecast(ll geo.LatLng) (*Forecast, error)
-	History(ll geo.LatLng, t time.Time) (*Conditions, error)
+type provider interface {
+	current(ll geo.LatLng) (*Conditions, error)
+	forecast(ll geo.LatLng) (*Forecast, error)
+	history(ll geo.LatLng, t time.Time) (*Conditions, error)
 }
 
 type options struct {
 	darkSkyKey string
 	timezone   *time.Location
-	custom     Provider
 }
 
 type Forecast struct {
@@ -38,12 +37,8 @@ func NewClient(opts ...func(*options)) *Client {
 		opt(options)
 	}
 
-	if options.custom != nil {
-		return &Client{provider: options.custom}
-	}
-
 	return &Client{
-		provider: NewDarkSkyProvider(options.darkSkyKey, options.timezone),
+		provider: newDarkSkyProvider(options.darkSkyKey, options.timezone),
 	}
 }
 
@@ -63,16 +58,8 @@ func TimeZone(loc *time.Location) func(*options) {
 	}
 }
 
-func Custom(provider Provider) func(*options) {
-	return func(opts *options) {
-		if provider != nil {
-			opts.custom = provider
-		}
-	}
-}
-
 func (c *Client) Current(ll geo.LatLng) (*Conditions, error) {
-	return c.provider.Current(ll)
+	return c.provider.current(ll)
 }
 
 func (c *Client) Now(ll geo.LatLng) (*Conditions, error) {
@@ -80,11 +67,11 @@ func (c *Client) Now(ll geo.LatLng) (*Conditions, error) {
 }
 
 func (c *Client) Forecast(ll geo.LatLng) (*Forecast, error) {
-	return c.provider.Forecast(ll)
+	return c.provider.forecast(ll)
 }
 
 func (c *Client) History(ll geo.LatLng, t time.Time) (*Conditions, error) {
-	return c.provider.History(ll, t)
+	return c.provider.history(ll, t)
 }
 
 func (c *Client) At(ll geo.LatLng, t time.Time) (*Conditions, error) {
