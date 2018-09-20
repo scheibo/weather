@@ -9,17 +9,19 @@ import (
 )
 
 type Client struct {
-	provider provider
+	provider Provider
 }
 
-type provider interface {
-	current(ll geo.LatLng) (*Conditions, error)
-	forecast(ll geo.LatLng) (*Forecast, error)
-	history(ll geo.LatLng, t time.Time) (*Conditions, error)
+type Provider interface {
+	Current(ll geo.LatLng) (*Conditions, error)
+	Forecast(ll geo.LatLng) (*Forecast, error)
+	History(ll geo.LatLng, t time.Time) (*Conditions, error)
 }
 
 type options struct {
 	darkSkyKey string
+	timezone   *time.Location
+	custom     Provider
 }
 
 type Forecast struct {
@@ -27,13 +29,22 @@ type Forecast struct {
 }
 
 func NewClient(opts ...func(*options)) *Client {
-	options := &options{darkSkyKey: os.Getenv("DARKSKY_API_KEY")}
+	options := &options{
+		darkSkyKey: os.Getenv("DARKSKY_API_KEY"),
+		timezone:   time.UTC,
+	}
 
 	for _, opt := range opts {
 		opt(options)
 	}
 
-	return &Client{provider: newDarkSkyProvider(options.darkSkyKey)}
+	if options.custom != nil {
+		return &Client{provider: options.custom}
+	}
+
+	return &Client{
+		provider: NewDarkSkyProvider(options.darkSkyKey, options.timezone),
+	}
 }
 
 func DarkSky(key string) func(*options) {
@@ -44,8 +55,24 @@ func DarkSky(key string) func(*options) {
 	}
 }
 
+func TimeZone(loc *time.Location) func(*options) {
+	return func(opts *options) {
+		if loc != nil {
+			opts.timezone = loc
+		}
+	}
+}
+
+func Custom(provider Provider) func(*options) {
+	return func(opts *options) {
+		if provider != nil {
+			opts.custom = provider
+		}
+	}
+}
+
 func (c *Client) Current(ll geo.LatLng) (*Conditions, error) {
-	return c.provider.current(ll)
+	return c.provider.Current(ll)
 }
 
 func (c *Client) Now(ll geo.LatLng) (*Conditions, error) {
@@ -53,11 +80,11 @@ func (c *Client) Now(ll geo.LatLng) (*Conditions, error) {
 }
 
 func (c *Client) Forecast(ll geo.LatLng) (*Forecast, error) {
-	return c.provider.forecast(ll)
+	return c.provider.Forecast(ll)
 }
 
 func (c *Client) History(ll geo.LatLng, t time.Time) (*Conditions, error) {
-	return c.provider.history(ll, t)
+	return c.provider.History(ll, t)
 }
 
 func (c *Client) At(ll geo.LatLng, t time.Time) (*Conditions, error) {

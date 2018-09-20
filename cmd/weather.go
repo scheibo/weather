@@ -49,13 +49,14 @@ func (ll *LatLngFlag) Set(v string) error {
 }
 
 func main() {
-	var key string
+	var key, tz string
 	var tf TimeFlag
 	var llf LatLngFlag
 	var t time.Time
 	var ll geo.LatLng
 
 	flag.StringVar(&key, "key", "", "DarkySky API Key")
+	flag.StringVar(&tz, "tz", "America/Los_Angeles", "timezone to use")
 	flag.Var(&llf, "latlng", "latitude and longitude to query weather information for")
 	flag.Var(&tf, "time", "time to query weather information for")
 
@@ -73,7 +74,12 @@ func main() {
 		exit(fmt.Errorf("latlng required"))
 	}
 
-	w := weather.NewClient(weather.DarkSky(key))
+	loc, err := time.LoadLocation(tz)
+	if err != nil {
+		exit(err)
+	}
+
+	w := weather.NewClient(weather.DarkSky(key), weather.TimeZone(loc))
 
 	c, err := w.History(ll, t)
 	if err != nil {

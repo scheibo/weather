@@ -25,6 +25,8 @@ type Conditions struct {
 	WindSpeed           float64   `json:"windSpeed,omitempty"`
 	WindGust            float64   `json:"windGust,omitempty"`
 	WindBearing         float64   `json:"windBearing,omitempty"`
+	SunriseTime         time.Time `json:"sunriseTime",omitempty"`
+	SunsetTime          time.Time `json:"sunsetTime",omitempty"`
 }
 
 func (c *Conditions) String() string {
@@ -34,7 +36,8 @@ func (c *Conditions) String() string {
 			"%.1f km/h (%.1f km/h) %s\n"+
 			"%.3f kg/m³ / %.2f mbar\n"+
 			"%s"+
-			"UV: %d / CC: %d%%", // TODO: "/ AQI: %d",
+			"UV: %d / CC: %d%%\n"+ // TODO: "/ AQI: %d"
+			"(%s / %s)",
 		strings.ToUpper(c.Icon),
 		round(c.Temperature, 0.1),
 		int(c.Humidity*100),
@@ -44,7 +47,9 @@ func (c *Conditions) String() string {
 		round(c.AirPressure, 0.01),
 		c.Precip(),
 		c.UVIndex,
-		int(c.CloudCover*100))
+		int(c.CloudCover*100),
+		c.SunriseTime.Format("3:04 PM"),
+		c.SunsetTime.Format("3:04 PM"))
 }
 
 func (c *Conditions) longWind() string {
