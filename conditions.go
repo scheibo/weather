@@ -33,7 +33,7 @@ func (c *Conditions) String() string {
 	return fmt.Sprintf(
 		"%s\n"+
 			"%.1f°C / %d%% (~%.1f°C)\n"+
-			"%.1f km/h (%.1f km/h) %s\n"+
+			"%s\n"+
 			"%.3f kg/m³ / %.2f mbar\n"+
 			"%s"+
 			"UV: %d / CC: %d%%\n"+ // TODO: "/ AQI: %d"
