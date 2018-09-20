@@ -28,14 +28,6 @@ type Conditions struct {
 }
 
 func (c *Conditions) String() string {
-	precip := ""
-	if c.PrecipProbability > 0 && c.PrecipIntensity > 0 {
-		precip = fmt.Sprintf("%d%% %s (%.1f mm/h)\n",
-			int(c.PrecipProbability*100),
-			c.PrecipType,
-			round(c.PrecipIntensity, 0.1))
-	}
-
 	return fmt.Sprintf(
 		"%s\n"+
 			"%.1f°C / %d%% (~%.1f°C)\n"+
@@ -47,14 +39,35 @@ func (c *Conditions) String() string {
 		round(c.Temperature, 0.1),
 		int(c.Humidity*100),
 		round(c.ApparentTemperature, 0.1),
-		round(c.WindSpeed*msToKmh, 0.1),
-		round(c.WindGust*msToKmh, 0.1),
-		Direction(c.WindBearing),
+		c.longWind(),
 		round(c.AirDensity, 0.001),
 		round(c.AirPressure, 0.01),
-		precip,
+		c.Precip(),
 		c.UVIndex,
 		int(c.CloudCover*100))
+}
+
+func (c *Conditions) longWind() string {
+	return fmt.Sprintf("%.1f km/h (%.1f km/h) %s",
+		round(c.WindSpeed*msToKmh, 0.1),
+		round(c.WindGust*msToKmh, 0.1),
+		Direction(c.WindBearing))
+}
+
+func (c *Conditions) Wind() string {
+	return fmt.Sprintf("%.1f km/h %s",
+		round(c.WindSpeed*msToKmh, 0.1),
+		Direction(c.WindBearing))
+}
+
+func (c *Conditions) Precip() string {
+	if c.PrecipProbability > 0 && c.PrecipIntensity > 0 {
+		return fmt.Sprintf("%d%% %s (%.1f mm/h)\n",
+			int(c.PrecipProbability*100),
+			c.PrecipType,
+			round(c.PrecipIntensity, 0.1))
+	}
+	return ""
 }
 
 func Direction(b float64) string {
