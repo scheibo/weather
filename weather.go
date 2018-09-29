@@ -78,6 +78,69 @@ func (c *Client) At(ll geo.LatLng, t time.Time) (*Conditions, error) {
 	return c.History(ll, t)
 }
 
+func Average(cs []*Conditions) *Conditions {
+	n := len(cs)
+	if n == 0 {
+		return nil
+	}
+
+	t0 := time.Time{}
+
+	avg := cs[0]
+	avg.Icon = ""
+	avg.Time = t0
+	avg.PrecipType = ""
+	avg.SunriseTime = t0
+	avg.SunsetTime = t0
+
+	var nsws, ewws, nswg, ewwg, wb float64
+
+	for i := 1; i < n; i++ {
+		c := cs[i]
+		avg.Temperature += c.Temperature
+		avg.Humidity += c.Humidity
+		avg.ApparentTemperature += c.ApparentTemperature
+		avg.PrecipProbability += c.PrecipProbability
+		avg.PrecipIntensity += c.PrecipIntensity
+		avg.AirPressure += c.AirPressure
+		avg.AirDensity += c.AirDensity
+		avg.CloudCover += c.CloudCover
+		avg.UVIndex += c.UVIndex
+
+		wb = c.WindBearing * geo.DEGREES_TO_RADIANS
+		ewws += c.WindSpeed * math.Sin(wb)
+		nsws += c.WindSpeed * math.Cos(wb)
+		ewwg += c.WindGust * math.Sin(wb)
+		nswg += c.WindGust * math.Cos(wb)
+	}
+
+	f := float64(n)
+	avg.Temperature /= f
+	avg.Humidity /= f
+	avg.ApparentTemperature /= f
+	avg.PrecipProbability /= f
+	avg.PrecipIntensity /= f
+	avg.AirPressure /= f
+	avg.AirDensity /= f
+	avg.CloudCover /= f
+	avg.UVIndex /= n
+
+	ewws /= f
+	nsws /= f
+	ewwg /= f
+	nswg /= f
+
+	avg.WindSpeed = math.Sqrt(nsws*nsws + ewws*ewws)
+	avg.WindGust = math.Sqrt(nswg*nswg + ewwg*ewwg)
+	wb = math.Atan2(ewws, nsws)
+	if nsws < 0 {
+		wb += math.Pi
+	}
+	avg.WindBearing = normalizeBearing(wb * geo.RADIANS_TO_DEGREES)
+
+	return avg
+}
+
 func rho(t, p, dp float64) float64 {
 	const Rd = 287.0531 // specific gas constant for dry air in J(kg*K)
 	const Rv = 461.4964 // specific gas constant for water vapor in J(kg*K)
