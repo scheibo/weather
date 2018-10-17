@@ -86,7 +86,7 @@ func Average(cs []*Conditions) *Conditions {
 
 	t0 := time.Time{}
 
-	avg := cs[0]
+	avg := *cs[0]
 	avg.Icon = ""
 	avg.Time = t0
 	avg.PrecipType = ""
@@ -138,7 +138,7 @@ func Average(cs []*Conditions) *Conditions {
 	}
 	avg.WindBearing = normalizeBearing(wb * geo.RADIANS_TO_DEGREES)
 
-	return avg
+	return &avg
 }
 
 func rho(t, p, dp float64) float64 {
