@@ -148,15 +148,15 @@ func rho(t, p, dp float64) float64 {
 
 	// Herman Wobus constants
 	const c0 = 0.99999683
-	const c1 = -0.90826951E-02
-	const c2 = 0.78736169E-04
-	const c3 = -0.61117958E-06
-	const c4 = 0.43884187E-08
-	const c5 = -0.29883885E-10
-	const c6 = 0.21874425E-12
-	const c7 = -0.17892321E-14
-	const c8 = 0.11112018E-16
-	const c9 = -0.30994571E-19
+	const c1 = -0.90826951e-02
+	const c2 = 0.78736169e-04
+	const c3 = -0.61117958e-06
+	const c4 = 0.43884187e-08
+	const c5 = -0.29883885e-10
+	const c6 = 0.21874425e-12
+	const c7 = -0.17892321e-14
+	const c8 = 0.11112018e-16
+	const c9 = -0.30994571e-19
 
 	x := c0 + dp*(c1+dp*(c2+dp*(c3+dp*(c4+dp*(c5+dp*(c6+dp*(c7+dp*(c8+dp*(c9)))))))))
 	pv := 6.1078 / (math.Pow(x, 8))
