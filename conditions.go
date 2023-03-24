@@ -21,7 +21,7 @@ type Conditions struct {
 	AirPressure         float64   `json:"airPressure,omitempty"`
 	AirDensity          float64   `json:"airDensity,omitempty"`
 	CloudCover          float64   `json:"cloudCover,omitempty"`
-	UVIndex             int       `json:"uvIndex,omitempty"`
+	UVIndex             float64       `json:"uvIndex,omitempty"`
 	WindSpeed           float64   `json:"windSpeed,omitempty"`
 	WindGust            float64   `json:"windGust,omitempty"`
 	WindBearing         float64   `json:"windBearing,omitempty"`
@@ -36,7 +36,7 @@ func (c *Conditions) String() string {
 			"%s\n"+
 			"%.3f kg/m³ / %.2f mbar\n"+
 			"%s"+
-			"UV: %d / CC: %d%%\n"+ // TODO: "/ AQI: %d"
+			"UV: %.2f / CC: %d%%\n"+ // TODO: "/ AQI: %d"
 			"(%s / %s)",
 		strings.ToUpper(c.Icon),
 		round(c.Temperature, 0.1),

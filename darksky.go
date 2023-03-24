@@ -18,8 +18,12 @@ type darkSkyProvider struct {
 	loc    *time.Location
 }
 
+const PIRATE_WEATHER = "https://api.pirateweather.net/forecast"
+
 func newDarkSkyProvider(key string, loc *time.Location) *darkSkyProvider {
-	return &darkSkyProvider{client: darksky.NewClient(key), loc: loc}
+	client := darksky.NewClient(key)
+	client.BaseURL = PIRATE_WEATHER
+	return &darkSkyProvider{client: client, loc: loc}
 }
 
 var darkSkyCurrentArguments = darksky.Arguments{"excludes": "minutely,hourly,alerts,flags", "units": "si"}

@@ -123,7 +123,7 @@ func Average(cs []*Conditions) *Conditions {
 	avg.AirPressure /= f
 	avg.AirDensity /= f
 	avg.CloudCover /= f
-	avg.UVIndex /= n
+	avg.UVIndex /= f
 
 	ewws /= f
 	nsws /= f
